@@ -2,29 +2,793 @@
 title: "Data Viz Using ggplot2: Tips and Tricks for Creating Custom Figures in R"
 author: "Micah E. Hirsch"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    code_folding: show
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# Introduction
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This document contains the code presented in the accompanying tutorial presentation. In this document, I will walk through the steps for creating a variety of different figures using ggplot2 in R.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+You may save this code and adapt it for your projects as appropriate. All resources used in this code are listed at the end of this document and/or in the accompanying presentation slides.
 
-```{r cars}
-summary(cars)
+## R Version
+
+This ggplot2 tutorial was coded using R version 4.2.3 (R Core Team, 2023)
+
+# ggplot2 Basics
+
+Before diving into the code, here is a brief reminder of the ggplot2 building blocks.
+
+-   Starting a ggplot
+
+    -   All figures made using ggplot2 start with the function ggplot()
+
+-   Data
+
+    -   This is the data frame (df) used to create the figure.
+
+    -   Depending on what you are trying to plot, your data may need to be in either a long or wide format.
+
+-   Aesthetics
+
+    -   The aes() function defines the visual properties of the figure.
+
+    -   Example: x-axis, y-axis, grouping variables, etc.
+
+-   Geometric Objects
+
+    -   Also known as geoms
+
+    -   These are the features of your figure (e.g. creating a scatterplot, line graph, etc.).
+
+    -   You can add as many geom layers as you would like to a figure.
+
+-   Statistical Transformations
+
+    -   There are several ways to define the statistical transformations in ggplot2. You can do this within specific geoms, using stat_summary() function, or even by creating another summary df to reference in your ggplot.
+
+# Distributions
+
+Let's get started by creating some distribution plots. We will start with a basic histogram. For this tutorial, we will be using select data from Borrie et al. (2021)'s perceptual learning study. This dataset contains listener intelligibility scores from a pretest phase and posttest phase. The listeners were assigned to one of three speakers with dysarthria: AM1, ALSM1 or PDM10. These are male speakers with dysarthria secondary to cerebellar ataxia, ALS, and Parkinson's disease respectively.
+
+There are also age-corrected standardized scores on different cognitive tests from the NIH Toolbox cognitive battery: working memory, inhibitory control and attention, processing speed, receptive vocabulary, and cognitive flexibility. The dataset I am providing here just contains select variables and calculated intelligibility levels for each participant's pretest and posttest. However, you can find the full dataset (including the raw transcription data) and other study materials here: <https://osf.io/y32qc/>.
+
+-   Data Dictionary
+
+    -   list_sort_c = working memory age-corrected standard score
+
+    -   flanker_c = inhibitory control age-corrected standard score
+
+    -   card_sort_c = cognitive flexibility age-corrected standard score
+
+    -   vocab_c = receptive vocabulary age-corrected standard score
+
+    -   pattern_c = processing speech age-corrected standard score
+
+    -   intel = intelligibility (percent words correct score)
+
+    -   phase = testing phase (pretest or posttest; pretest is set as the referent level)
+
+Borrie, S. A., Lansford, K. L., & Barrett, T. S. (2021). A clinical advantage: Experience informs recognition and adaptation to a novel talker with dysarthria. *Journal of Speech, Language, and Hearing Research*, *64*(5), 1503--1514. <https://doi.org/10.1044/2021_JSLHR-20-00663>
+
+Please note: The original dataset in the shared folder is in a long format (each participant has 2 rows of data for their pre-test and post-test intelligibility scores). We need this data in the long format for some data visualizations. However, we will need data in a wide format where pretest and postest are their own separate variables. The long format data also needs to be pivoted to have each cognitive test on their own line too. I hid the code block in the .html version of this document showing how I loaded in the data and created a wide format version. However, you can open the .Rmd document to see that code block in more detail. Thus, there are 3 active dfs created from the dataset: the original df (borrie_df), the wide df (borrie_df_wide), and the (extra) long df (borrie_df_long).
+
+```{r, warning = F, message = F}
+
+# Loading needed packages
+
+## This is the package I use to load in datasets
+
+library(rio) #install.packages("rio")
+
+## Loading in tidyverse will also load ggplot2
+
+library(tidyverse) #install.packages("tidyverse")
+
+borrie_df<- rio::import("Data/Borrie_2021_data.csv")
+
+borrie_df <- borrie_df %>%
+  dplyr::mutate(phase = as.factor(phase)) %>%
+  dplyr::mutate(phase = fct_relevel(phase, "pretest", "posttest"))
+
+# Creating a wide format sf
+borrie_df_wide <- borrie_df %>%
+  tidyr::pivot_wider(names_from = phase,
+                     values_from = intel)
+
+# Editing long format
+
+borrie_df_long <- borrie_df %>%
+  tidyr::pivot_longer(cols = list_sort_c:pattern_c,
+                      names_to = "cognitive_skills",
+                      values_to = "standard_score")
+
+rio::export(borrie_df_wide, "Data/Borrie_2021_data_wide.csv")
+
+rio::export(borrie_df_long, "Data/Borrie_2021_long.csv")
+
 ```
 
-## Including Plots
+## Histograms
 
-You can also embed plots, for example:
+### Basic Histogram
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+The code block below sets up a basic histogram of the listener working memory scores. Note, after you initialize the ggplot, you use the '+' sign to add additional layers to the plot, not the '%\>%' magrittr pipe function that is part of 'tidyverse'.
+
+```{r, warning = F, message = F}
+
+# Basic Histogram
+borrie_df_wide %>%
+  # initializing the ggplot.
+  ggplot() +
+  # Define the aesthetics. Here we just need to specify the x-axis.
+  aes(x = list_sort_c) +
+  # Add the histogram geom
+  geom_histogram()
+
+# to save this figure
+
+ggsave("Plots/Basic_hist.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Changing the Number of Bins
+
+Here we will change the number of bins to 12.
+
+```{r, warning = F, message = F}
+
+# Updated Histogram
+borrie_df_wide %>%
+  # initializing the ggplot.
+  ggplot() +
+  # Define the aesthetics. Here we just need to specify the x-axis.
+  aes(x = list_sort_c) +
+  # Add the histogram geom
+  geom_histogram(bins = 12)
+
+# to save this figure
+
+ggsave("Plots/hist_bin_adjust.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
+```
+
+As you can see, a histogram can give you a good idea of the spread of your data. However, they aren't usually my "go-to" way to visualize this. I usually like to use either violin plots or density ridgelines.
+
+## Violin Plots
+
+### Basic Violin Plot
+
+In this next code block, we will create a basic violin plot. In this plot, we will plot the pretest listener intelligibility for each speaker group, AM1, ALSM1, and PDM10. We will use the wide df for this.
+
+```{r, warning = F, message = F}
+
+borrie_df_wide %>%
+  ggplot() +
+  #Now in aesthetics, we need to specify both our x and y axes.
+  aes(x = speaker,
+      y = pretest) +
+  # Add the violin geom
+  geom_violin()
+
+# To save the violin plot
+
+ggsave("Plots/basic_violin.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
+```
+
+### Adding a box plot above the violin plot
+
+This is a good start, but maybe we want to see the median pretest intelligibility value and the quartiles. You can add a boxplot to the above figure.
+
+```{r, warning = F, message = F}
+
+# Adding a Box Plot
+
+borrie_df_wide %>%
+  ggplot() +
+  # Now in aesthetics, we need to specify both our x and y axes.
+  aes(x = speaker,
+      y = pretest) +
+  geom_violin() +
+  # Adding another geom for boxplot
+  geom_boxplot(width = 0.25)
+
+# To Save the plot
+
+ggsave("Plots/violin_boxplot.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
+```
+
+### Color Coding Speaker Groups
+
+One thing we can do to make this plot more visually-appealing is color coding the speaker groups. To do this, we need to add a color and fill argument to our aes() line.
+
+#### Adding a Color Argument
+
+Notice what happens when we just specify a color argument.
+
+```{r, warning = F, message = F}
+
+borrie_df_wide %>%
+  ggplot() +
+  # Adding color = speaker to the aesthetics.
+  aes(x = speaker,
+      y = pretest,
+      color = speaker) +
+  geom_violin() +
+  geom_boxplot(width = 0.25)
+
+# To save the plot
+
+ggsave("Plots/violin_boxplot_color.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
+```
+
+#### Adding a Fill Argument
+
+Now, instead of adding a color argument, let's add a fill argument to aes().
+
+```{r, warning = F, message = F}
+
+borrie_df_wide %>%
+  ggplot() +
+  # Adding fill = speaker to the aesthetics.
+  aes(x = speaker,
+      y = pretest,
+      fill = speaker) +
+  geom_violin() +
+  geom_boxplot(width = 0.25)
+
+# To save the plot
+
+ggsave("Plots/violin_boxplot_fill.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
+
+```
+
+#### When to use color vs. fill
+
+So from above, you can see that the color argument in aes() will change the line color, while the fill argument will change the "inside" of the plots. This is true for all types of geoms (bargraphs, denisty plots, etc.).
+
+## Density Ridgeline Plot
+
+### Basic Ridgeline Plot
+
+Another way to visualize the distribution of your data is to use a density ridgeline plot. To make this type of plot, you need to install the 'ggridges' package (Wilke, 2022). We will create a density ridgeline plot for pretest listener intelligibility for each of the three speakers.
+
+```{r, warning = F, message = F}
+
+library(ggridges) #install.packages("ggridges")
+
+# Basic Density Ridgeline Plot
+
+borrie_df_wide %>%
+  ggplot() +
+  # Note how I flipped the x and y coordinate values here.
+  aes(x = pretest,
+      y = speaker) +
+  # specifying the density ridges geom
+  geom_density_ridges()
+
+# To save the plot
+
+ggsave("Plots/basic_denisty.png", plot = last_plot(), width = 10, height = 8, units = "in", scale = 0.8)
+  
+
+```
+
+### Adding Individual Points
+
+One thing I like to do is add the individual listener points to this plot. The ggridges package makes this pretty simple to do by specifying a jittered points agrument within geom_density_ridges().
+
+```{r, warning = F, message = F}
+
+# Adding jittered points
+
+borrie_df_wide %>%
+  ggplot() +
+  aes(x = pretest,
+      y = speaker) +
+  # specifying the density ridges geom, including jittered points
+  geom_density_ridges(jittered_points = T)
+
+# To save figure
+
+ggsave("Plots/density_points.png", plot = last_plot(), width = 10, height = 8, units = "in", scale = .8)
+
+
+```
+
+#### Changing the position of the points
+
+We can change the poisition of the points by then adding a position argument. Here, I will add the points below the ridgelines. Because the ridgeline plots are slightly overlapping, I will also change the alpha level and scale of the density plots to make the points more visible.
+
+```{r, warning = F, message = F}
+
+# Chanigng jittered points position
+
+borrie_df_wide %>%
+  ggplot() +
+  aes(x = pretest,
+      y = speaker) +
+  # specifying the density ridges geom, including jittered points and position
+  geom_density_ridges(jittered_points = T, position = "raincloud",
+                      scale = 0.9, alpha = 0.7)
+
+# To save figure
+
+ggsave("Plots/density_point_position.png", plot = last_plot(), width = 10, height = 8, units = "in", scale = .8)
+
+```
+
+#### Changing the Shape of the Points
+
+We can even change the shape of the individual points. Instead of having "dots" we can use lines (|) to indicate the individual points
+
+```{r, warning = F, message = F}
+
+# Changing the shape of the dashed points
+borrie_df_wide %>%
+  ggplot() +
+  aes(x = pretest,
+      y = speaker) +
+  # specifying the density ridges geom, including jittered points and position
+  geom_density_ridges(jittered_points = T, 
+                      position = position_points_jitter(width = 0.05, height = 0),
+                      point_shape = '|', point_size = 3, point_alpha = 1 , alpha = 0.7)
+
+# To save figure
+
+ggsave("Plots/density_point_change.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
+```
+
+# Regression and Correlation Plots
+
+## Scatterplot
+
+For studies that are interested in the relationship between two variables, we often use scatterplots to visualize whether if there is any evidence of a relationship.
+
+### Basic Scatterplot
+
+We will build a simple scatterplot showing the relationship between receptive vocabulary and pretest intelligibility.
+
+```{r, warning = F, message = F}
+
+borrie_df_wide %>%
+  ggplot() +
+  aes(x = vocab_c,
+      y = pretest) +
+  geom_point()
+
+# To save the plot
+
+ggsave("Plots/basic_scatter.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
+```
+
+#### Add a regression line
+
+From the scatterplot above, it is hard to see a definitive relationship. However, we can add a regression line. There are two ways to do this. You can use either geom_abline() or geom_smooth() geoms. I prefer using geom_smooth() because the syntax is a bit simpler. With geom_abline(), you would need to specify your intercept and slope. You can also only fit linear lines with geom_abline(). So geom_smooth is a little more flexible.
+
+```{r, warning = F, message = F}
+
+# Adding a regression line
+
+borrie_df_wide %>%
+  ggplot() +
+  aes(x = vocab_c,
+      y = pretest) +
+  geom_point() +
+  # Adding the regression line. Method sets the type of fit to use
+  # se sets whether to include the standard error shading
+  geom_smooth(method = "lm", se = T)
+
+# To fit the line
+
+ggsave("Plots/scatter_line.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
+```
+
+#### Grouping by Speaker
+
+According to the plot above, there doesn't seem to be a strong relationship between receptive vocabulary and pretest intelligibility scores. But what if we wanted to see this relationship for each speaker condition. We can easily do this by setting color in the aes() function. We see now that there might be slight differences in relationships depending on the speaker the listener was assigned to in the study (of course you would need to test this through statistical testing).
+
+```{r, warning = F, message = F}
+
+# Plotting lines by speaker
+
+borrie_df_wide %>%
+  ggplot() +
+  # Adding by speaker in the aesthetics
+  aes(x = vocab_c,
+      y = pretest,
+      color = speaker) +
+  geom_point() +
+  # Adding the regression line. Method sets the type of fit to use
+  # se sets whether to include the standard error shading
+  geom_smooth(method = "lm", se = T)
+
+# To fit the line
+
+ggsave("Plots/scatter_line_speaker.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
+```
+
+#### Facetting by Cognitive Test
+
+Ok, so we just made a pretty cool looking plot. But what if we need to make this plot for all our cognitve tests. You could make each plot individually, but an easier solution would to use the facet_wrap() function to create panels for each test. For this, we should use the long df format. Since we want to just model the relationship between these cognitve skills and the pretest intelligibility, we will first filter the long df for just the pretest intelligibility scores.
+
+```{r, warning = F, message = F}
+
+borrie_df_long %>%
+  #filtering just the pretest intel scores
+  dplyr::filter(phase == "pretest") %>%
+  ggplot() +
+  aes(x = standard_score,
+      y = intel,
+      color = speaker) +
+  geom_point() +
+  geom_smooth(method = "lm", se = T) +
+  # facetting by cognitive_skills
+  facet_wrap("cognitive_skills")
+
+# To save the plot
+
+ggsave("Plots/scatter_facet.png", plot = last_plot(), width = 15, height = 10, units = "in", scale = .8)
+
+```
+
+We can adjust the number of columns in the facet_wrap() argument.
+
+```{r, warning = F, message = F}
+
+borrie_df_long %>%
+  #filtering just the pretest intel scores
+  dplyr::filter(phase == "pretest") %>%
+  ggplot() +
+  aes(x = standard_score,
+      y = intel,
+      color = speaker) +
+  geom_point() +
+  geom_smooth(method = "lm", se = T) +
+  # facetting by cognitive_skills. added ncol argument
+  facet_wrap("cognitive_skills", ncol = 2)
+
+# To save the plot
+
+ggsave("Plots/scatter_facet_2.png", plot = last_plot(), width = 15, height = 15, units = "in", scale = .8)
+
+```
+
+#### Changing the point and linetype
+
+The different colors help separate out the listeners assigned to each speaker. However, you can also change the linetype and point type to help further distinguish the different speakers in the scatterplot by adding arguments to the aes() function.
+
+```{r, warning = F, message = F}
+
+borrie_df_long %>%
+  #filtering just the pretest intel scores
+  dplyr::filter(phase == "pretest") %>%
+  ggplot() +
+  # Adding linetype and shape to the aesthetics
+  aes(x = standard_score,
+      y = intel,
+      color = speaker,
+      linetype = speaker,
+      shape = speaker) +
+  geom_point() +
+  geom_smooth(method = "lm", se = T) +
+  facet_wrap("cognitive_skills")
+
+# To save the plot
+
+ggsave("Plots/scatter_line_point.png", plot = last_plot(), width = 15, height = 10, units = "in", scale = .8)
+
+```
+
+#### Changing coordinate system
+
+So one thing you may notice that, by default, the y-axis range for intelligibility is set between 0 and 90. This is likely due to the actual recorded data. However, in theory, speech intelligibiity ranges from 0 to 100. We can rescale this axis using coord_cartesian().
+
+```{r, warning = F, message = F}
+
+borrie_df_long %>%
+  #filtering just the pretest intel scores
+  dplyr::filter(phase == "pretest") %>%
+  ggplot() +
+  # Adding linetype and shape to the aesthetics
+  aes(x = standard_score,
+      y = intel,
+      color = speaker,
+      linetype = speaker,
+      shape = speaker) +
+  geom_point() +
+  geom_smooth(method = "lm", se = T) +
+  facet_wrap("cognitive_skills") +
+  # Changing range of 
+  coord_cartesian(ylim = c(0, 100)) +
+  # Adding this to increase spacing between facets
+  theme(panel.spacing=unit(1,"lines"))
+
+# To save the plot
+
+ggsave("Plots/scatter_coord.png", plot = last_plot(), width = 17, height = 10, units = "in", scale = 0.8)
+
+```
+
+##### Fair Warning About Rescaling the Axes Using xlim() and ylim()
+
+There are another set of functions in ggplot2 that can be used to rescale the axes. This is xlim() and ylim()\*. These arguments also ajust the range of the x- and y- axes. However, when you use these functions, it actually will change your data. This can impact the fit of the regression lines, etc. in the figure. You should use coord_cartesian() instead.
+
+\*Note: This is not the same as the xlim and ylim arguments in coord_cartesian()
+
+# Line Plot
+
+You can also create a line plot in R. Our final example is a pre-post plot.
+
+## Basic Pre-Post Plot
+
+We will now plot the pretest and posttest intelligibility scores. Since our long df has multiple rows for pretest and posttest values for each listener due to the cogntive test scores, we will use the original df (i.e. the one with two rows per participant).
+
+```{r, warning = F, message = F}
+
+borrie_df %>%
+  ggplot() +
+  # Adding group argument to plot each listener's intelligibility data
+  aes(x = phase,
+      y = intel,
+      group = id) + 
+  # Using the geom_line() geom to 
+  geom_line()
+  
+# To save plot
+
+ggsave("Plots/basic_pre_post.png", plot = last_plot(), width = 5, height = 5, units = "in", scale = .8)
+
+```
+
+### Facet by Speaker
+
+Like before, let's facet this pre-post plot by speaker. I will also set color to speaker in the aes().
+
+```{r}
+
+borrie_df %>%
+  ggplot() +
+  aes(x = phase,
+      y = intel,
+      group = id,
+      color = speaker) + 
+  geom_line() + 
+  facet_wrap("speaker")
+  
+# To save plot
+
+ggsave("Plots/pre_post_facet.png", plot = last_plot(), width = 13, height = 5, units = "in", scale = .8)
+
+```
+
+### Adding a Mean Line
+
+We can add a mean line for the pre-post plot. We can do this by using another geom_line() layer. To do this, we will first need to calculate the descriptive statistics (mean), for pretest and posttest intelligibility for each speaker. Then we will specify that specific df in the geom_line() argument. We will also change the alpha level of the individual listener data to make the mean line easier to see.
+
+```{r, warning = F, message = F}
+
+# Creating the descriptive statistics df.
+
+sum <- borrie_df %>%
+  dplyr::group_by(speaker, phase) %>%
+  dplyr::summarize(Intel = mean(intel))
+
+# Creating the plot
+
+borrie_df %>%
+  ggplot() +
+  aes(x = phase,
+      y = intel,
+      group = id,
+      color = speaker) + 
+  # Adjusting alpha level to make individual lines lighter
+  geom_line(alpha = 0.3) + 
+  # Another geom_line to add summary line. Also made it thicker
+  geom_line(data = sum, aes(x = phase, y = Intel, group = speaker), linewidth = 2) +
+  facet_wrap("speaker")
+  
+# To save plot
+
+ggsave("Plots/pre_post_facet.png", plot = last_plot(), width = 13, height = 5, units = "in", scale = .8)
+
+```
+
+# More Customizations
+
+Here are a few more customization options. For these examples, we will be using the pre-post plot example above.
+
+## Renaming the X-Axis and Y-Axis
+
+Right now, the x-and y-axes are named phase and intel respectively. However, more descriptive labels can be added using the labs() function.
+
+```{r}
+
+borrie_df %>%
+  ggplot() +
+  aes(x = phase,
+      y = intel,
+      group = id,
+      color = speaker) + 
+  geom_line(alpha = 0.3) + 
+  geom_line(data = sum, aes(x = phase, y = Intel, group = speaker), linewidth = 2) +
+  # Adding labels
+  labs(x = "Phase", y = "Intelligibility") +
+  facet_wrap("speaker")
+  
+# To save plot
+
+ggsave("Plots/pre_post_labs.png", plot = last_plot(), width = 13, height = 5, units = "in", scale = .8)
+
+```
+
+## Changing Theme
+
+In all of the figure examples so far, the plots have been created on a light gray background. This is the default theme in ggplot2. However, there are a number of themes you can apply. Some of my favorites are shown below. However, there are so many themes you can use (they are a quick google search away!).
+
+### Theme Classic
+
+```{r}
+
+borrie_df %>%
+  ggplot() +
+  aes(x = phase,
+      y = intel,
+      group = id,
+      color = speaker) + 
+  geom_line(alpha = 0.3) + 
+  geom_line(data = sum, aes(x = phase, y = Intel, group = speaker), linewidth = 2) +
+  labs(x = "Phase", y = "Intelligibility") +
+  facet_wrap("speaker") +
+  theme_classic()
+  
+# To save plot
+
+ggsave("Plots/pre_post_classic.png", plot = last_plot(), width = 13, height = 5, units = "in", scale = .8)
+
+```
+
+### Theme Black and White
+
+```{r}
+
+borrie_df %>%
+  ggplot() +
+  aes(x = phase,
+      y = intel,
+      group = id,
+      color = speaker) + 
+  geom_line(alpha = 0.3) +
+  geom_line(data = sum, aes(x = phase, y = Intel, group = speaker), linewidth = 2) +
+  labs(x = "Phase", y = "Intelligibility") +
+  facet_wrap("speaker") +
+  theme_bw()
+  
+# To save plot
+
+ggsave("Plots/pre_post_bw.png", plot = last_plot(), width = 13, height = 5, units = "in", scale = .8)
+
+```
+
+## Changing Location of the Legend
+
+Sometimes, you may want to change the location of the legend. If this is the case, you can use the theme() function to relocate the legend.
+
+```{r}
+
+borrie_df %>%
+  ggplot() +
+  # Adding group argument to plot each listener's intelligibility data
+  aes(x = phase,
+      y = intel,
+      group = id,
+      color = speaker) + 
+  geom_line(alpha = 0.3) + 
+  geom_line(data = sum, aes(x = phase, y = Intel, group = speaker), linewidth = 2) +
+  labs(x = "Phase", y = "Intelligibility") +
+  facet_wrap("speaker") +
+  theme_bw() +
+  # Relocating legend to the bottom
+  theme(legend.position = "bottom") 
+  
+# To save plot
+
+ggsave("Plots/pre_post_legend.png", plot = last_plot(), width = 13, height = 5, units = "in", scale = .8)
+
+```
+
+## Custom Color Palettes
+
+Finally, when you do not specify your color palette, R will use their default colors. This is okay. However, many times, you may want to use a custom color palette. There are a number of color palette packages like RColorBrewer. However, I usually like to specify my own color palette in a vector. I use the website <https://coolors.co/> to generate color palettes.
+
+Then in the ggplot, you will add scale_color_manual() and/or scale_fill_manual() depending on whether you want to change the outline, the fill color, or both. In our line plot example, we just need to change the color using scale_color_manual().
+
+```{r}
+
+# Creating a vector with color HEX codes. 
+## I usually like to have a color palette with 5 colors.
+
+my_pal <- c("#25283D", "#8F3985", "#98DFEA", "#07BEB8", "#EFD9CE")
+
+borrie_df %>%
+  ggplot() +
+  aes(x = phase,
+      y = intel,
+      group = id,
+      color = speaker) + 
+  geom_line(alpha = 0.3) + 
+  geom_line(data = sum, aes(x = phase, y = Intel, group = speaker), linewidth = 2) +
+  labs(x = "Phase", y = "Intelligibility") +
+  facet_wrap("speaker") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  # Using the color palette for the custom plot colors
+  scale_color_manual(values = my_pal)
+  
+# To save plot
+
+ggsave("Plots/pre_post_color.png", plot = last_plot(), width = 13, height = 5, units = "in", scale = .8)
+
+```
+
+By default, the colors will be used in the palette order. However, you can specify the specific colors to use in scale_color_manual() as well.
+
+```{r}
+
+borrie_df %>%
+  ggplot() +
+  aes(x = phase,
+      y = intel,
+      group = id,
+      color = speaker) + 
+  geom_line(alpha = 0.3) + 
+  geom_line(data = sum, aes(x = phase, y = Intel, group = speaker), linewidth = 2) +
+  labs(x = "Phase", y = "Intelligibility") +
+  facet_wrap("speaker") +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  #using the 1st, 2nd, and 4th colors in the palette
+  scale_color_manual(values = c(my_pal[1], my_pal[2], my_pal[4]))
+  
+# To save plot
+
+ggsave("Plots/pre_post_color_2.png", plot = last_plot(), width = 13, height = 5, units = "in", scale = .8)
+
+```
+
+# Additional Resources
+
+This tutorial just scratches the surface about all the possible figures you can make in ggplot2. My hope is that this tutorial helps you get started in creating stunning figures!
+
+Below are a list of resources that I have complied that I find useful for creating figures. I consulted a few of these resources in preparing this tutorial. However, many of them go into much more detail.
+
+-   R for Data Science: <https://r4ds.had.co.nz/index.html>
+
+-   R for Researchers: An Introduction!: <https://tysonbarrett.com/Rstats/index.html>
+
+-   Introduction to geoms: <https://blog.rsquaredacademy.com/ggplot2-introduction-to-geoms>
+
+-   ggridges: <https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html>
+
+-   ggplot colors: <https://www.datanovia.com/en/blog/ggplot-colors-best-tricks-you-will-love/#:~:text=Change%20ggplot%20colors%20by%20assigning,or%20to%20the%20fill%20arguments.>
+
+-   Linetypes: <http://www.sthda.com/english/wiki/ggplot2-line-types-how-to-change-line-types-of-a-graph-in-r-software#:~:text=Visualization%20in%20R-,Line%20types%20in%20R,%2C%204%2C%205%2C%206.>
+
+-   Point Shape: <http://www.sthda.com/english/wiki/ggplot2-point-shapes>
+
+-   A List of Geoms Available for ggplot: <https://github.com/erikgahner/awesome-ggplot2>
