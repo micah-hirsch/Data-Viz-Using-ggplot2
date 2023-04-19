@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output: 
   html_document:
     toc: true
+    toc_float: true
     code_folding: show
 ---
 
@@ -52,7 +53,7 @@ Before diving into the code, here is a brief reminder of the ggplot2 building bl
 
 -   Statistical Transformations
 
-    -   There are several ways to define the statistical transformations in ggplot2. You can do this within specific geoms, using stat_summary() function, or even by creating another summary df to reference in your ggplot.
+    -   There are several ways to define the statistical transformations in ggplot2. You can do this within specific geoms, using stat_summary() function, or even by creating another summary df to reference in your ggplot. I usually prefer creating a summary df instead of using stat_summary.
 
 # Distributions
 
@@ -78,7 +79,7 @@ There are also age-corrected standardized scores on different cognitive tests fr
 
 Borrie, S. A., Lansford, K. L., & Barrett, T. S. (2021). A clinical advantage: Experience informs recognition and adaptation to a novel talker with dysarthria. *Journal of Speech, Language, and Hearing Research*, *64*(5), 1503--1514. <https://doi.org/10.1044/2021_JSLHR-20-00663>
 
-Please note: The original dataset in the shared folder is in a long format (each participant has 2 rows of data for their pre-test and post-test intelligibility scores). We need this data in the long format for some data visualizations. However, we will need data in a wide format where pretest and postest are their own separate variables. The long format data also needs to be pivoted to have each cognitive test on their own line too. I hid the code block in the .html version of this document showing how I loaded in the data and created a wide format version. However, you can open the .Rmd document to see that code block in more detail. Thus, there are 3 active dfs created from the dataset: the original df (borrie_df), the wide df (borrie_df_wide), and the (extra) long df (borrie_df_long).
+Please note: The original dataset in the shared folder is in a long format (each participant has 2 rows of data for their pre-test and post-test intelligibility scores). We need this data in the long format for some data visualizations. However, we will need data in a wide format where pretest and postest are their own separate variables. The long format data also needs to be pivoted to have each cognitive test on their own line too. Thus, there are 3 active dfs created from the dataset: the original df (borrie_df), the wide df (borrie_df_wide), and the (extra) long df (borrie_df_long).
 
 ```{r, warning = F, message = F}
 
@@ -331,7 +332,7 @@ ggsave("Plots/density_point_position.png", plot = last_plot(), width = 10, heigh
 
 #### Changing the Shape of the Points
 
-We can even change the shape of the individual points. Instead of having "dots" we can use lines (|) to indicate the individual points
+We can even change the shape of the individual points. Instead of having "dots" we can use lines (\|) to indicate the individual points
 
 ```{r, warning = F, message = F}
 
@@ -377,7 +378,7 @@ ggsave("Plots/basic_scatter.png", plot = last_plot(), width = 5, height = 5, uni
 
 #### Add a regression line
 
-From the scatterplot above, it is hard to see a definitive relationship. However, we can add a regression line. There are two ways to do this. You can use either geom_abline() or geom_smooth() geoms. I prefer using geom_smooth() because the syntax is a bit simpler. With geom_abline(), you would need to specify your intercept and slope. You can also only fit linear lines with geom_abline(). So geom_smooth is a little more flexible.
+From the scatterplot above, it is hard to see a definitive relationship. However, we can add a regression line. There are two ways to do this. You can use either geom_abline() or geom_smooth() geoms. I prefer using geom_smooth() because the syntax is a bit simpler. With geom_abline(), you would need to specify your intercept and slope, which means you would need to run your model first. Also, you can only fit linear lines with geom_abline(). So geom_smooth is a little more flexible, since it allows several methods for fitting a line (lm, loess, gam, glm).
 
 ```{r, warning = F, message = F}
 
@@ -400,7 +401,7 @@ ggsave("Plots/scatter_line.png", plot = last_plot(), width = 5, height = 5, unit
 
 #### Grouping by Speaker
 
-According to the plot above, there doesn't seem to be a strong relationship between receptive vocabulary and pretest intelligibility scores. But what if we wanted to see this relationship for each speaker condition. We can easily do this by setting color in the aes() function. We see now that there might be slight differences in relationships depending on the speaker the listener was assigned to in the study (of course you would need to test this through statistical testing).
+According to the plot above, there does not seem to be a strong relationship between receptive vocabulary and pretest intelligibility scores. But what if we wanted to see this relationship for each speaker condition. We can easily do this by setting color in the aes() function. We see now that there might be slight differences in relationships depending on the speaker the listener was assigned to in the study (of course you would need to test this through statistical testing).
 
 ```{r, warning = F, message = F}
 
@@ -425,7 +426,7 @@ ggsave("Plots/scatter_line_speaker.png", plot = last_plot(), width = 5, height =
 
 #### Facetting by Cognitive Test
 
-Ok, so we just made a pretty cool looking plot. But what if we need to make this plot for all our cognitve tests. You could make each plot individually, but an easier solution would to use the facet_wrap() function to create panels for each test. For this, we should use the long df format. Since we want to just model the relationship between these cognitve skills and the pretest intelligibility, we will first filter the long df for just the pretest intelligibility scores.
+So we just made a pretty cool looking plot. But what if we need to make this plot for all our cognitive tests. You could make each plot individually, but an easier solution would to use the facet_wrap() function to create panels for each test. For this, we should use the long df format. Since we want to just model the relationship between these cognitive skills and the pretest intelligibility, we will first filter the long df for just the pretest intelligibility scores.
 
 ```{r, warning = F, message = F}
 
@@ -527,7 +528,7 @@ ggsave("Plots/scatter_coord.png", plot = last_plot(), width = 17, height = 10, u
 
 ##### Fair Warning About Rescaling the Axes Using xlim() and ylim()
 
-There are another set of functions in ggplot2 that can be used to rescale the axes. This is xlim() and ylim()\*. These arguments also ajust the range of the x- and y- axes. However, when you use these functions, it actually will change your data. This can impact the fit of the regression lines, etc. in the figure. You should use coord_cartesian() instead.
+There are another set of functions in ggplot2 that can be used to rescale the axes. This is xlim() and ylim()\*. These arguments also adjust the range of the x- and y- axes. However, when you use these functions, it will change your data. You can think of it like it is filtering out the data rather than changing the data "window" you are looking at. Therefore, this can untimately impact the fit of the regression lines, etc. in the figure. You should use coord_cartesian() instead.
 
 \*Note: This is not the same as the xlim and ylim arguments in coord_cartesian()
 
@@ -537,7 +538,7 @@ You can also create a line plot in R. Our final example is a pre-post plot.
 
 ## Basic Pre-Post Plot
 
-We will now plot the pretest and posttest intelligibility scores. Since our long df has multiple rows for pretest and posttest values for each listener due to the cogntive test scores, we will use the original df (i.e. the one with two rows per participant).
+We will now plot the pretest and posttest intelligibility scores. Since the long df has multiple rows for pretest and posttest values for each listener due to the cognitive test scores, let's use the original df (i.e. the one with two rows per participant).
 
 ```{r, warning = F, message = F}
 
@@ -579,7 +580,9 @@ ggsave("Plots/pre_post_facet.png", plot = last_plot(), width = 13, height = 5, u
 
 ### Adding a Mean Line
 
-We can add a mean line for the pre-post plot. We can do this by using another geom_line() layer. To do this, we will first need to calculate the descriptive statistics (mean), for pretest and posttest intelligibility for each speaker. Then we will specify that specific df in the geom_line() argument. We will also change the alpha level of the individual listener data to make the mean line easier to see.
+We can add a mean line for the pre-post plot. You can do this by using another geom_line() layer. To do this, we will first need to calculate the descriptive statistics (mean), for pretest and posttest intelligibility for each speaker. Then we will specify that specific df in the geom_line() argument. We will also change the alpha level of the individual listener data to make the mean line easier to see.
+
+Note: Instead of using another geom_line() layer, you could use stat_summary() instead. I personally have use both methods, but I prefer creating a summary df and then referencing that particulat df in any relevant geom layers.
 
 ```{r, warning = F, message = F}
 
@@ -609,9 +612,9 @@ ggsave("Plots/pre_post_facet.png", plot = last_plot(), width = 13, height = 5, u
 
 ```
 
-# More Customizations
+# More Customization
 
-Here are a few more customization options. For these examples, we will be using the pre-post plot example above.
+Here are a few more customization options. For these examples, I will be using the pre-post plot example above.
 
 ## Renaming the X-Axis and Y-Axis
 
@@ -639,7 +642,7 @@ ggsave("Plots/pre_post_labs.png", plot = last_plot(), width = 13, height = 5, un
 
 ## Changing Theme
 
-In all of the figure examples so far, the plots have been created on a light gray background. This is the default theme in ggplot2. However, there are a number of themes you can apply. Some of my favorites are shown below. However, there are so many themes you can use (they are a quick google search away!).
+In all of the figure examples so far, the plots have been created on a light gray background. This is the default theme in ggplot2. However, there are a number of themes you can apply. Some of my favorites are shown below. However, there are so many themes you can use (they are a quick Google search away!).
 
 ### Theme Classic
 
@@ -714,7 +717,7 @@ ggsave("Plots/pre_post_legend.png", plot = last_plot(), width = 13, height = 5, 
 
 ## Custom Color Palettes
 
-Finally, when you do not specify your color palette, R will use their default colors. This is okay. However, many times, you may want to use a custom color palette. There are a number of color palette packages like RColorBrewer. However, I usually like to specify my own color palette in a vector. I use the website <https://coolors.co/> to generate color palettes.
+Finally, when you do not specify your color palette, R will use their default colors. This is okay. However, many times, you may want to use a custom color palette. There are a number of color palette packages like RColorBrewer. However, I usually like to specify my own color palette in a vector. I use the website <https://coolors.co/> to generate color palettes. Then, I will copy the HEX codes from the generated color palette into a vector in R.
 
 Then in the ggplot, you will add scale_color_manual() and/or scale_fill_manual() depending on whether you want to change the outline, the fill color, or both. In our line plot example, we just need to change the color using scale_color_manual().
 
