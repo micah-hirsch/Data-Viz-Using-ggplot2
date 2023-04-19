@@ -57,7 +57,7 @@ Before diving into the code, here is a brief reminder of the ggplot2 building bl
 
 # Distributions
 
-Let's get started by creating some distribution plots. We will start with a basic histogram. For this tutorial, we will be using select data from Borrie et al. (2021)'s perceptual learning study. This dataset contains listener intelligibility scores from a pretest phase and posttest phase. The listeners were assigned to one of three speakers with dysarthria: AM1, ALSM1 or PDM10. These are male speakers with dysarthria secondary to cerebellar ataxia, ALS, and Parkinson's disease respectively.
+Let's get started by creating some distribution plots. We will start with a basic histogram. For this tutorial, we will be using select data from Lansford et al. (2023)'s perceptual learning study. This dataset contains listener intelligibility scores from a pretest phase and posttest phase. The listeners were assigned to one of three speakers with dysarthria: AM1, ALSM1 or PDM10. These are male speakers with dysarthria secondary to cerebellar ataxia, ALS, and Parkinson's disease respectively.
 
 There are also age-corrected standardized scores on different cognitive tests from the NIH Toolbox cognitive battery: working memory, inhibitory control and attention, processing speed, receptive vocabulary, and cognitive flexibility. The dataset I am providing here just contains select variables and calculated intelligibility levels for each participant's pretest and posttest. However, you can find the full dataset (including the raw transcription data) and other study materials here: <https://osf.io/y32qc/>.
 
@@ -77,9 +77,9 @@ There are also age-corrected standardized scores on different cognitive tests fr
 
     -   phase = testing phase (pretest or posttest; pretest is set as the referent level)
 
-Borrie, S. A., Lansford, K. L., & Barrett, T. S. (2021). A clinical advantage: Experience informs recognition and adaptation to a novel talker with dysarthria. *Journal of Speech, Language, and Hearing Research*, *64*(5), 1503--1514. <https://doi.org/10.1044/2021_JSLHR-20-00663>
+Lansford, K. L., Barrett, T. S., & Borrie, S. A. (2023). Cognitive Predictors of Perception and Adaptation to Dysarthric Speech in Young Adult Listeners. *Journal of Speech, Language, and Hearing Research*, *66*(1), 30--47. <https://doi.org/10.1044/2022_JSLHR-22-00391>
 
-Please note: The original dataset in the shared folder is in a long format (each participant has 2 rows of data for their pre-test and post-test intelligibility scores). We need this data in the long format for some data visualizations. However, we will need data in a wide format where pretest and postest are their own separate variables. The long format data also needs to be pivoted to have each cognitive test on their own line too. Thus, there are 3 active dfs created from the dataset: the original df (borrie_df), the wide df (borrie_df_wide), and the (extra) long df (borrie_df_long).
+Please note: The original dataset in the shared folder is in a long format (each participant has 2 rows of data for their pre-test and post-test intelligibility scores). We need this data in the long format for some data visualizations. However, we will need data in a wide format where pretest and postest are their own separate variables. The long format data also needs to be pivoted to have each cognitive test on their own line too. Thus, there are 3 active dfs created from the dataset: the original df (data), the wide df (data_wide), and the (extra) long df (data_long).
 
 ```{r, warning = F, message = F}
 
@@ -93,27 +93,27 @@ library(rio) #install.packages("rio")
 
 library(tidyverse) #install.packages("tidyverse")
 
-borrie_df<- rio::import("Data/Borrie_2021_data.csv")
+data <- rio::import("Data/Lansford_2021_data.csv")
 
-borrie_df <- borrie_df %>%
+data <- data %>%
   dplyr::mutate(phase = as.factor(phase)) %>%
   dplyr::mutate(phase = fct_relevel(phase, "pretest", "posttest"))
 
 # Creating a wide format sf
-borrie_df_wide <- borrie_df %>%
+data_wide <- data %>%
   tidyr::pivot_wider(names_from = phase,
                      values_from = intel)
 
 # Editing long format
 
-borrie_df_long <- borrie_df %>%
+data_long <- data %>%
   tidyr::pivot_longer(cols = list_sort_c:pattern_c,
                       names_to = "cognitive_skills",
                       values_to = "standard_score")
 
-rio::export(borrie_df_wide, "Data/Borrie_2021_data_wide.csv")
+rio::export(data_wide, "Data/Lansford_2021_data_wide.csv")
 
-rio::export(borrie_df_long, "Data/Borrie_2021_long.csv")
+rio::export(data_long, "Data/Lansford_2021_long.csv")
 
 ```
 
@@ -126,7 +126,7 @@ The code block below sets up a basic histogram of the listener working memory sc
 ```{r, warning = F, message = F}
 
 # Basic Histogram
-borrie_df_wide %>%
+data_wide %>%
   # initializing the ggplot.
   ggplot() +
   # Define the aesthetics. Here we just need to specify the x-axis.
@@ -147,7 +147,7 @@ Here we will change the number of bins to 12.
 ```{r, warning = F, message = F}
 
 # Updated Histogram
-borrie_df_wide %>%
+data_wide %>%
   # initializing the ggplot.
   ggplot() +
   # Define the aesthetics. Here we just need to specify the x-axis.
@@ -171,7 +171,7 @@ In this next code block, we will create a basic violin plot. In this plot, we wi
 
 ```{r, warning = F, message = F}
 
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   #Now in aesthetics, we need to specify both our x and y axes.
   aes(x = speaker,
@@ -193,7 +193,7 @@ This is a good start, but maybe we want to see the median pretest intelligibilit
 
 # Adding a Box Plot
 
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   # Now in aesthetics, we need to specify both our x and y axes.
   aes(x = speaker,
@@ -218,7 +218,7 @@ Notice what happens when we just specify a color argument.
 
 ```{r, warning = F, message = F}
 
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   # Adding color = speaker to the aesthetics.
   aes(x = speaker,
@@ -239,7 +239,7 @@ Now, instead of adding a color argument, let's add a fill argument to aes().
 
 ```{r, warning = F, message = F}
 
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   # Adding fill = speaker to the aesthetics.
   aes(x = speaker,
@@ -271,7 +271,7 @@ library(ggridges) #install.packages("ggridges")
 
 # Basic Density Ridgeline Plot
 
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   # Note how I flipped the x and y coordinate values here.
   aes(x = pretest,
@@ -294,7 +294,7 @@ One thing I like to do is add the individual listener points to this plot. The g
 
 # Adding jittered points
 
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   aes(x = pretest,
       y = speaker) +
@@ -316,7 +316,7 @@ We can change the poisition of the points by then adding a position argument. He
 
 # Chanigng jittered points position
 
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   aes(x = pretest,
       y = speaker) +
@@ -337,7 +337,7 @@ We can even change the shape of the individual points. Instead of having "dots" 
 ```{r, warning = F, message = F}
 
 # Changing the shape of the dashed points
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   aes(x = pretest,
       y = speaker) +
@@ -364,7 +364,7 @@ We will build a simple scatterplot showing the relationship between receptive vo
 
 ```{r, warning = F, message = F}
 
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   aes(x = vocab_c,
       y = pretest) +
@@ -384,7 +384,7 @@ From the scatterplot above, it is hard to see a definitive relationship. However
 
 # Adding a regression line
 
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   aes(x = vocab_c,
       y = pretest) +
@@ -407,7 +407,7 @@ According to the plot above, there does not seem to be a strong relationship bet
 
 # Plotting lines by speaker
 
-borrie_df_wide %>%
+data_wide %>%
   ggplot() +
   # Adding by speaker in the aesthetics
   aes(x = vocab_c,
@@ -430,7 +430,7 @@ So we just made a pretty cool looking plot. But what if we need to make this plo
 
 ```{r, warning = F, message = F}
 
-borrie_df_long %>%
+data_long %>%
   #filtering just the pretest intel scores
   dplyr::filter(phase == "pretest") %>%
   ggplot() +
@@ -444,7 +444,7 @@ borrie_df_long %>%
 
 # To save the plot
 
-ggsave("Plots/scatter_facet.png", plot = last_plot(), width = 15, height = 10, units = "in", scale = .8)
+ggsave("Plots/scatter_facet.png", plot = last_plot(), width = 15, height = 10, units = "in", scale = .6)
 
 ```
 
@@ -452,7 +452,7 @@ We can adjust the number of columns in the facet_wrap() argument.
 
 ```{r, warning = F, message = F}
 
-borrie_df_long %>%
+data_long %>%
   #filtering just the pretest intel scores
   dplyr::filter(phase == "pretest") %>%
   ggplot() +
@@ -466,7 +466,7 @@ borrie_df_long %>%
 
 # To save the plot
 
-ggsave("Plots/scatter_facet_2.png", plot = last_plot(), width = 15, height = 15, units = "in", scale = .8)
+ggsave("Plots/scatter_facet_2.png", plot = last_plot(), width = 13, height = 15, units = "in", scale = .5)
 
 ```
 
@@ -476,7 +476,7 @@ The different colors help separate out the listeners assigned to each speaker. H
 
 ```{r, warning = F, message = F}
 
-borrie_df_long %>%
+data_long %>%
   #filtering just the pretest intel scores
   dplyr::filter(phase == "pretest") %>%
   ggplot() +
@@ -492,7 +492,7 @@ borrie_df_long %>%
 
 # To save the plot
 
-ggsave("Plots/scatter_line_point.png", plot = last_plot(), width = 15, height = 10, units = "in", scale = .8)
+ggsave("Plots/scatter_line_point.png", plot = last_plot(), width = 15, height = 10, units = "in", scale = .6)
 
 ```
 
@@ -502,7 +502,7 @@ So one thing you may notice that, by default, the y-axis range for intelligibili
 
 ```{r, warning = F, message = F}
 
-borrie_df_long %>%
+data_long %>%
   #filtering just the pretest intel scores
   dplyr::filter(phase == "pretest") %>%
   ggplot() +
@@ -522,7 +522,7 @@ borrie_df_long %>%
 
 # To save the plot
 
-ggsave("Plots/scatter_coord.png", plot = last_plot(), width = 17, height = 10, units = "in", scale = 0.8)
+ggsave("Plots/scatter_coord.png", plot = last_plot(), width = 17, height = 10, units = "in", scale = 0.6)
 
 ```
 
@@ -542,7 +542,7 @@ We will now plot the pretest and posttest intelligibility scores. Since the long
 
 ```{r, warning = F, message = F}
 
-borrie_df %>%
+data %>%
   ggplot() +
   # Adding group argument to plot each listener's intelligibility data
   aes(x = phase,
@@ -563,7 +563,7 @@ Like before, let's facet this pre-post plot by speaker. I will also set color to
 
 ```{r}
 
-borrie_df %>%
+data %>%
   ggplot() +
   aes(x = phase,
       y = intel,
@@ -588,13 +588,13 @@ Note: Instead of using another geom_line() layer, you could use stat_summary() i
 
 # Creating the descriptive statistics df.
 
-sum <- borrie_df %>%
+sum <- data %>%
   dplyr::group_by(speaker, phase) %>%
   dplyr::summarize(Intel = mean(intel))
 
 # Creating the plot
 
-borrie_df %>%
+data %>%
   ggplot() +
   aes(x = phase,
       y = intel,
@@ -622,7 +622,7 @@ Right now, the x-and y-axes are named phase and intel respectively. However, mor
 
 ```{r}
 
-borrie_df %>%
+data %>%
   ggplot() +
   aes(x = phase,
       y = intel,
@@ -648,7 +648,7 @@ In all of the figure examples so far, the plots have been created on a light gra
 
 ```{r}
 
-borrie_df %>%
+data %>%
   ggplot() +
   aes(x = phase,
       y = intel,
@@ -670,7 +670,7 @@ ggsave("Plots/pre_post_classic.png", plot = last_plot(), width = 13, height = 5,
 
 ```{r}
 
-borrie_df %>%
+data %>%
   ggplot() +
   aes(x = phase,
       y = intel,
@@ -694,7 +694,7 @@ Sometimes, you may want to change the location of the legend. If this is the cas
 
 ```{r}
 
-borrie_df %>%
+data %>%
   ggplot() +
   # Adding group argument to plot each listener's intelligibility data
   aes(x = phase,
@@ -728,7 +728,7 @@ Then in the ggplot, you will add scale_color_manual() and/or scale_fill_manual()
 
 my_pal <- c("#25283D", "#8F3985", "#98DFEA", "#07BEB8", "#EFD9CE")
 
-borrie_df %>%
+data %>%
   ggplot() +
   aes(x = phase,
       y = intel,
@@ -753,7 +753,7 @@ By default, the colors will be used in the palette order. However, you can speci
 
 ```{r}
 
-borrie_df %>%
+data %>%
   ggplot() +
   aes(x = phase,
       y = intel,
