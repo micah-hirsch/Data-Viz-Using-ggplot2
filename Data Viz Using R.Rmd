@@ -515,7 +515,7 @@ data_long %>%
   geom_point() +
   geom_smooth(method = "lm", se = T) +
   facet_wrap("cognitive_skills") +
-  # Changing range of 
+  # Changing range of y axis
   coord_cartesian(ylim = c(0, 100)) +
   # Adding this to increase spacing between facets
   theme(panel.spacing=unit(1,"lines"))
@@ -548,7 +548,7 @@ data %>%
   aes(x = phase,
       y = intel,
       group = id) + 
-  # Using the geom_line() geom to 
+  # adding geom_line()
   geom_line()
   
 # To save plot
@@ -608,7 +608,7 @@ data %>%
   
 # To save plot
 
-ggsave("Plots/pre_post_facet.png", plot = last_plot(), width = 13, height = 5, units = "in", scale = .8)
+ggsave("Plots/pre_post_mean.png", plot = last_plot(), width = 13, height = 5, units = "in", scale = .8)
 
 ```
 
